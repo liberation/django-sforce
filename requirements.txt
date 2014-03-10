@@ -1,0 +1,4 @@
+django==1.4.5
+requests
+oauthlib
+requests_oauthlib
