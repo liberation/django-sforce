@@ -3,11 +3,11 @@ DJANGO-SFORCE
 
 Django-sforce is a Django client module for the SalesForce REST Api : http://www.salesforce.com/us/developer/docs/api_rest/.
 It allows to easily access the whole api and synchronise with django models.
-Why not [django-salesforce](https://github.com/freelancersunion/django-salesforce) ? As tempting as the custom DB backend approach looks like, i prefer a more straighforward client.
+Why not [django-salesforce](https://github.com/freelancersunion/django-salesforce) ? As tempting as the custom DB backend approach looks like, i prefer a more straightforward client.
 
 
 Basic Usage
-------------
+-----------
 
 ```python
 > from sforce.api import SalesForceApi
@@ -27,7 +27,8 @@ Basic Usage
 {'ids': [u'001D000000IqhSLIAZ',], 'latestDateCovered': '_TODAY_'}
 > api.delete('Account.instance', params={'id': u'001D000000IqhSLIAZ'})  # delete the Account
 > {}
-> api.get('Account.deleted', params={u'start': yesterday, u'end': datetime.now()})  # fetch deleted Account(s)
+> api.get('Account.deleted', params={u'start': yesterday,    # fetch deleted Account(s)
+                                     u'end': datetime.now()})
 {u'deletedRecords': [{u'deletedDate': '_TODAY_', u'id': u'001D000000IqhSLIAZ'}], u'latestDateCovered': u'_TODAY_', u'earliestDateAvailable': u'_SOME_DATE_'}
 
 ```
@@ -85,15 +86,15 @@ Note that for now SalesForceApi do nothing if the distant object was deleted, it
 Settings
 --------
 
-* SF_CONSUMER_KEY 
+* SF_CONSUMER_KEY  
 Mandatory
 * SF_CONSUMER_SECRET  
 Mandatory 
 * SF_USER  
 Mandatory
-* SF_PASSWORD
+* SF_PASSWORD  
 Mandatory
-* SF_SECURITY_TOKEN
+* SF_SECURITY_TOKEN  
 Only mandatory if server IP is not whitelisted in the salesforce admin
 * SF_API_VERSION = '29.0'  
 Because i don't test the api directly, i can't promise the older versions of the api would work.  
@@ -108,15 +109,14 @@ It allows to avoid the overhead from non used salesforce objects and keep the re
 Advanced Usage
 --------------
 
-* extends the default api
 * logger
 * create a custom resource
-* create a custom api
+* create a custom api, extends the default api resources
 * use the xml format
 
 TODO
 ----
 
+* advanced usage docs
 * Special resources Query and Search
-* Explore the API to complete the resource_tree with resources missing in the docs.
 * django 1.5 & 1.6
