@@ -2,3 +2,5 @@
 *.pyc
 env/
 sf_settings.py
+django_sforce.egg-info/
+dist/
