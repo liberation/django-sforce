@@ -1,4 +1,4 @@
-import json
+import urllib
 import urlparse
 import requests
 from datetime import datetime
@@ -14,7 +14,7 @@ class APIException(Exception):
 
 class BaseResource(object):
     """
-    An abstract class for any REST api resource
+    An abstract class for any REST api resource.
     """
     path = ''
     methods = ['HEAD', 'GET', 'POST', 'PUT', 'PATCH', 'DELETE']
@@ -28,7 +28,7 @@ class BaseResource(object):
         self.parent = kwargs.get('parent', None)
 
     def get_path(self):
-        return self.path.format(**self.params)
+        return self.path.format(**dict(zip(self.params, map(urllib.quote, self.params.values()))))
 
     def get_url(self):
         """
@@ -40,7 +40,7 @@ class BaseResource(object):
         return {}
 
     def format_data(self, data):
-        return data
+        return str(data)
 
     def parse_response(self, response):
         return response.text
@@ -110,6 +110,9 @@ class BaseResource(object):
 
 
 class RestApi(object):
+    """
+    An abstract class for a REST Api client.
+    """
     scheme = 'http'
     domain = 'over.ride.me'
     root_path = 'api/vX.X/'
@@ -123,6 +126,17 @@ class RestApi(object):
         self.session = self._get_session()
         self.resources = {}
         self.build_api()
+
+    def raw(self, method, path, data={}):
+        """
+        Performs a raw request on the api, using the default resource class
+        mostly for testing and exploration purposes
+        """
+        res = self.base_resource_class(self)
+        res.path = path
+        response = getattr(res, method.lower())(data)
+        del res
+        return response
 
     def make_resource(self, name, node, parent=None):
         cls = node.get('class') or self.base_resource_class
@@ -150,7 +164,7 @@ class RestApi(object):
 
     def build_api(self):
         """
-        creates all resources implicitly declared
+        Creates all resources implicitly declared
         """
         if not self.resources_tree and not self.resources_tree_module:
             raise AttributeError("Either resources_tree or resources_tree_module must be set.")
@@ -323,7 +337,7 @@ class ModelBasedApi(RestApi):
     > api.push('Account', u)  # synchro local -> distant
     """
 
-    def pull(self, resource_name, instance):
+    def pull(self, resource_name, instance, save=True):
         resource = self.get_resource(resource_name, instance=instance)
 
         dist_id = getattr(instance, resource.distant_id)
@@ -333,7 +347,8 @@ class ModelBasedApi(RestApi):
         payload = self.get(resource)
         for distant, local in resource.get_fields().iteritems():
             setattr(instance, local, resource.get_local_value(distant, payload[distant]))
-        instance.save()
+        if save:
+            instance.save()
         return payload
 
     def push(self, resource_name, instance):

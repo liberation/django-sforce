@@ -1,52 +1,25 @@
 """
-Note: list of error codes i bumped into, we might want to recover from some of them
-+ INVALID_SESSION_ID
-+ ENTITY_IS_DELETED
-+ NOT_FOUND
-+ INVALID_FIELD_FOR_INSERT_UPDATE
-+ INVALID_DATE_FORMAT
+Layer above RestApi, that describes the salesforce specific logic, authentification, special resources and API attributes.
 
-usage:
-> from sforce.api import SalesForceApi
-> api = SalesForceApi()
-> api.get('recent')
-> {...}
-> api.get('Account')  # shortcut to api.get('resources_list.Account')
-> {...}  # describe the Account object
-> api.post('Account', data={u'Name': u'foobar'})  # create an Account
-> {i'id': i'001D000000IqhSLIAZ' ...}
-> api.get('Account.instance', params={u'id': '001D000000IqhSLIAZ'})
-> {...}  # get all fields values
-> api.patch('Account.instance', params={u'id': '001D000000IqhSLIAZ'}, data={'Name': 'barfoo'})  # update the Account
-> {}
-> today = datetime.now()
-> yesterday = today - timedelta(days=1)
-> api.get('Account.updated', params={u'start': yesterday, u'end': today})
-> {'ids': [u'001D000000IqhSLIAZ',], 'latestDateCovered': '_TODAY_'}
-> api.delete('Account.instance', params={'id': u'001D000000IqhSLIAZ'})
-> {}
-> api.get('Account.deleted', params={u'start': yesterday, u'end': today})
-> {u'deletedRecords': [{u'deletedDate': '_TODAY_', u'id': u'001D000000IqhSLIAZ'}], u'latestDateCovered': u'_TODAY_', u'earliestDateAvailable': u'_SOME_DATE_'}
+Note: list of error codes i bumped into, we might want to recover from some of them
++ ENTITY_IS_DELETED
 """
 
 import urlparse
 
-try:
-    from django.conf import settings
-except ImportError:
-    from sforce import settings
+from django.conf import settings
 from django.utils import simplejson as json
 
 from requests_oauthlib.oauth2_session import OAuth2Session
 from oauthlib.oauth2 import LegacyApplicationClient
 from oauthlib.oauth2.rfc6749.parameters import validate_token_parameters
 
-from .client import RestApi
-from .client import JsonResource
-from .client import InstanceResource
-from .client import ModelBasedApi
-from .client import DateRangeResource
-from .client import ExternalIdInstanceResource
+from sforce.api.client import RestApi
+from sforce.api.client import JsonResource
+from sforce.api.client import InstanceResource
+from sforce.api.client import ModelBasedApi
+from sforce.api.client import DateRangeResource
+from sforce.api.client import ExternalIdInstanceResource
 
 from logging import getLogger
 log = getLogger(__package__)
@@ -98,6 +71,8 @@ class SalesForceAuthApi(RestApi):
                                          client_secret=self.client_secret)
         log.info('Fetched token %s' % token)
         self.domain = token['instance_url']
+        if 'identity' in self.resources:
+            self.resources['identity'].path = token['id']
 
     def _dispatch(self, *args, **kwargs):
         rerun = kwargs.pop('rerun', None)
@@ -154,31 +129,35 @@ class SObjectResource(SalesForceResource):
 
 
 class SObjectsResource(SalesForceResource):
-    sobjects_whitelist = getattr(settings, 'SF_SOBJECTS_WHITELIST', None) or {}
-
     def post_process(self, method, data):
         # we populate the resources
-        if self.sobjects_whitelist:
-            sobjects = [d for d in data['sobjects'] if d['name'] in self.sobjects_whitelist]
+        if self.api.sobjects_whitelist:
+            sobjects = [d for d in data['sobjects'] if d['name'] in self.api.sobjects_whitelist]
         else:
             sobjects = data['sobjects']
 
         for obj in sobjects:
             name = obj['name']
-            resources = dict([(r, {}) for r in obj['urls']])
+            sub = dict([(r, {}) for r in obj['urls']])
+            # adding deleted and updated resources because for some reason they are not listed in 'urls'
+            sub['updated'] = {'class': 'sforce.api.salesforce.UpdatedResource'}
+            sub['deleted'] = {'class': 'sforce.api.salesforce.DeletedResource'}
+            # removing sobject wich is redundant
+            del sub['sobject']
             self.api.make_resource(name,
                                    {'class': 'sforce.api.salesforce.SObjectResource',
-                                    'resources': resources},
+                                    'resources': sub},
                                    parent=self)
 
 
 class SalesForceApi(ModelBasedApi, SalesForceAuthApi):  # CachedApi
     base_resource_class = SalesForceResource
     scheme = 'https'  # not actualy used, only here for information
-    timeout = 2  # TODO: the sandbox is sloww...
+    timeout = 3  # TODO: the sandbox is sloww...
     root_path = u'services/data/v%s/' % settings.SF_API_VERSION
     cache_prefix = 'SalesForceApi'
     resources_tree_module = settings.SF_RESOURCES
+    sobjects_whitelist = getattr(settings, 'SF_SOBJECTS_WHITELIST', [])
 
     def __init__(self):
         super(SalesForceApi, self).__init__()

@@ -33,7 +33,7 @@ SF_SECURITY_TOKEN = sf_settings.SF_SECURITY_TOKEN  # only mandatory if server IP
 SF_API_VERSION = getattr(sf_settings, 'SF_API_VERSION', '29.0')
 SF_AUTH_DOMAIN = getattr(sf_settings, 'SF_AUTH_DOMAIN', 'https://test.salesforce.com/')
 SF_RESOURCES = getattr(sf_settings, 'SF_RESOURCES', 'sforce.api.resources')
-SF_SOBJECTS_WHITELIST = ['Account',]
+SF_SOBJECTS_WHITELIST = []
 
 # Hosts/domain names that are valid for this site; required if DEBUG is False
 # See https://docs.djangoproject.com/en/1.4/ref/settings/#allowed-hosts

@@ -1,6 +1,7 @@
 import mock
 import json
 import requests
+import urllib
 from requests_oauthlib import OAuth2Session
 
 from django.test import TestCase
@@ -78,6 +79,12 @@ class BaseResourceTest(TestCase):
         self.resource.params = {'foo': 'bar'}
         path = self.resource.get_path()
         self.assertEqual(path, 'bar/')
+
+    def test_quote_url_params(self):
+        self.resource.path = '{foo}/?v={value}'
+        self.resource.params = {'foo': 'bar', 'value':'wiz :test'}
+        path = self.resource.get_path()
+        self.assertEqual(path, 'bar/?v=wiz%20%3Atest')
 
     def test_post_process_is_called(self):
         with mock.patch.object(self.resource, 'post_process', return_value=None) as pp:
@@ -186,16 +193,17 @@ class RestApiTest(TestCase):
     def test_base_url(self):
         self.assertEqual(self.api.get_base_url(), u'https://api.test.com/rest/v1.0/')
 
-    def _test_request(self, resource_name, method, data=None, status_code=200):
+    def _test_request(self, resource_name, method, data={}, status_code=200):
         self.api.status_code = status_code
         resource = self.api.get_resource(resource_name)
         self.api.session.request = mock.MagicMock(return_value=MockResponse(self.api))
 
         getattr(resource, method.lower())(data)  # api call
+        self.assertNotEqual(data, None)  # regression test
         self.api.session.request.assert_called_once_with(method,
                                                          resource.get_url(),
                                                          headers=resource.get_headers(),
-                                                         data=data,
+                                                         data=str(data),
                                                          timeout=resource.timeout)
 
     def test_head(self):
@@ -243,7 +251,7 @@ class ModelSyncTest(TestCase):
         self.api.session.request.assert_called_once_with('POST',
                                                          'https://api.test.com/rest/v1.0/customer/',
                                                          headers={'Content-Type': 'application/json'},
-                                                         data={"LastName": "bar", "FirstName": "foo"},
+                                                         data="{'LastName': 'bar', 'FirstName': 'foo'}",
                                                          timeout=1)
         self.assertEqual(self.user.api_id, "001D000000IqhSLIAZ")
 
@@ -260,7 +268,7 @@ class ModelSyncTest(TestCase):
         self.api.session.request.assert_called_once_with('PATCH',
                                                          'https://api.test.com/rest/v1.0/customer/001D000000IqhSLIAZ/',
                                                          headers={'Content-Type': 'application/json'},
-                                                         data={"LastName": "bar", "FirstName": "foo2"},
+                                                         data="{'LastName': 'bar', 'FirstName': 'foo2'}",
                                                          timeout=1)
 
     def test_fetch(self):
@@ -272,7 +280,7 @@ class ModelSyncTest(TestCase):
         self.api.session.request.assert_called_once_with('GET',
                                                          'https://api.test.com/rest/v1.0/customer/001D000000IqhSLIAZ/',
                                                          headers={'Content-Type': 'application/json'},
-                                                         data={},
+                                                         data='{}',
                                                          timeout=1)
         self.assertEqual(self.user.first_name, 'foo3')
         self.assertEqual(self.user.last_name, 'bar3')
@@ -283,12 +291,11 @@ class ModelSyncTest(TestCase):
 
 
 class MySalesForceApi(TestApi, SalesForceApi):
-    """
-    Sales Force specific
-    """
+    sobjects_whitelist = ['Account',]
+
     def __init__(self, *args, **kwargs):
         # need to set the return value before the call to sobjects
-        # Note: the Contact object shouldn't be 'resourcified' because not specified in settings.SF_SOBJECTS_WHITELIST
+        # Note: the Contact object shouldn't be 'resourcified' because not specified in sobjects_whitelist
         self.return_value = u'{"encoding":"UTF-8", "sobjects": [{"name":"Account","label":"Account","customSetting":false,"undeletable":true,"mergeable":true,"replicateable":true,"triggerable":true,"feedEnabled":false,"retrieveable":true,"deprecatedAndHidden":false,"custom":false,"keyPrefix":"001","layoutable":true,"activateable":false,"labelPlural":"Accounts","urls":{"sobject":"/services/data/v29.0/sobjects/Account","quickActions":"/services/data/v29.0/sobjects/Account/quickActions","describe":"/services/data/v29.0/sobjects/Account/describe","rowTemplate":"/services/data/v29.0/sobjects/Account/{ID}","layouts":"/services/data/v29.0/sobjects/Account/describe/layouts","compactLayouts":"/services/data/v29.0/sobjects/Account/describe/compactLayouts"},"searchable":true,"queryable":true,"createable":true,"deletable":true,"updateable":true}, {"name":"Contact","label":"Contact","customSetting":false,"undeletable":true,"mergeable":true,"replicateable":true,"triggerable":true,"feedEnabled":false,"retrieveable":true,"deprecatedAndHidden":false,"custom":false,"keyPrefix":"002","layoutable":true,"activateable":false,"labelPlural":"Contacts","urls":{"sobject":"/services/data/v29.0/sobjects/Contact","quickActions":"/services/data/v29.0/sobjects/Contact/quickActions","describe":"/services/data/v29.0/sobjects/Contact/describe","rowTemplate":"/services/data/v29.0/sobjects/Contact/{ID}","layouts":"/services/data/v29.0/sobjects/Contact/describe/layouts","compactLayouts":"/services/data/v29.0/sobjects/Contact/describe/compactLayouts"},"searchable":true,"queryable":true,"createable":true,"deletable":true,"updateable":true}]}'
 
         # empty the test resource tree because we want to load saleforce's
@@ -317,7 +324,7 @@ class SalesForceApiTest(TestCase):
         self.api.session.request.assert_called_once_with('GET',
                                                          'https://footest.salesforce.com/rest/v1.0/sobjects/',
                                                          headers={'Content-Type': 'application/json'},
-                                                         data={},
+                                                         data='{}',
                                                          timeout=1)
 
     def test_resources_list_proxy(self):
@@ -333,7 +340,7 @@ class SalesForceApiTest(TestCase):
         self.assertEqual(r.get_path(), expected)
 
     def test_sobjects_whitelist(self):
-        # not loaded because not in settings.SF_SOBJECTS_WHITELIST
+        # not loaded because not in api.sobjects_whitelist
         with self.assertRaises(APIException):
             self.api.get_resource('Contact')
 
