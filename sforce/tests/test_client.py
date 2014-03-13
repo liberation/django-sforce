@@ -254,7 +254,7 @@ class ModelSyncTest(TestCase):
         self.api.session.request.assert_called_once_with('POST',
                                                          'https://api.test.com/rest/v1.0/customer/',
                                                          headers={'Content-Type': 'application/json'},
-                                                         data="{'LastName': 'bar', 'FirstName': 'foo'}",
+                                                         data='{"LastName": "bar", "FirstName": "foo"}',
                                                          timeout=1)
         self.assertEqual(self.user.api_id, "001D000000IqhSLIAZ")
 
@@ -271,7 +271,7 @@ class ModelSyncTest(TestCase):
         self.api.session.request.assert_called_once_with('PATCH',
                                                          'https://api.test.com/rest/v1.0/customer/001D000000IqhSLIAZ/',
                                                          headers={'Content-Type': 'application/json'},
-                                                         data="{'LastName': 'bar', 'FirstName': 'foo2'}",
+                                                         data='{"LastName": "bar", "FirstName": "foo2"}',
                                                          timeout=1)
 
     def test_fetch(self):

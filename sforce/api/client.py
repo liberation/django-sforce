@@ -2,6 +2,11 @@ import urllib
 import urlparse
 import requests
 from datetime import datetime
+try:
+    import json
+except ImportError:
+    from django.utils import simplejson as json
+
 
 from logging import getLogger
 
@@ -79,8 +84,8 @@ class BaseResource(object):
             msg = u'Api call on %s : %s returned a status code %s, expected a %s.' % (method, url, response.status_code, ok_code)
             if type(payload) == list:
                 payload = payload[0]  # Note: i don't like that
-            if self.error_key in payload:
-                msg += ' : %s' % payload
+            #if self.error_key in payload:
+            msg += ' - %s' % payload
             log.error(msg)
             raise APIException(msg)
 
@@ -226,6 +231,9 @@ class JsonResource(BaseResource):
             log.error(msg + repr(e))
             raise APIException(msg)
 
+    def format_data(self, data):
+        return json.dumps(data)
+
 
 class DateRangeResource(BaseResource):
     """
@@ -320,8 +328,19 @@ class ModelResource(BaseResource):
         else:
             return local_value
 
-    def get_fields(self):
-        return self.fields_map
+    def get_local_fields(self):
+        """
+        Returns a mapping of the form:
+        DISTANT_FIELD_NAME: LOCAL_VALUE
+        """
+        return dict([(k, self.get_distant_value(v, getattr(self.instance, v, v))) for k, v in self.fields_map.iteritems()])
+
+    def get_distant_fields(self, payload):
+        """
+        Returns a mapping of the form:
+        LOCAL_FIELD_NAME: DISTANT_VALUE
+        """
+        return dict([(v, self.get_local_value(v, payload[k])) for k, v in self.fields_map.iteritems()])
 
 
 class ModelBasedApi(RestApi):
@@ -345,16 +364,15 @@ class ModelBasedApi(RestApi):
             raise ValueError('%s(%s) has no %s ! You can not pull it !' % (instance, instance.__class__, resource.distant_id))
 
         payload = self.get(resource)
-        for distant, local in resource.get_fields().iteritems():
-            setattr(instance, local, resource.get_local_value(distant, payload[distant]))
+        for local_field, distant_value in resource.get_distant_fields(payload).iteritems():
+            setattr(instance, local_field, distant_value)
         if save:
             instance.save()
         return payload
 
     def push(self, resource_name, instance):
         resource = self.get_resource(resource_name, instance=instance)
-
-        fields = dict([(k, resource.get_distant_value(k, getattr(instance, v))) for k, v in resource.get_fields().iteritems()])
+        fields = resource.get_local_fields()
 
         if getattr(instance, resource.distant_id, None):
             # update - TODO: check the updated fields returned ?

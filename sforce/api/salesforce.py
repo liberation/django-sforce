@@ -166,14 +166,15 @@ class SalesForceApi(ModelBasedApi, SalesForceAuthApi):  # CachedApi
         super(SalesForceApi, self).__init__()
         self.get('sobjects')
 
-    def get_resource(self, resource_name, **kwargs):
+    def get_resource(self, resource, **kwargs):
         """
         proxy sobjects.Foo to Foo for convenience
         """
-        proxy = 'sobjects.%s' % resource_name
-        if not resource_name.startswith('sobjects.') and proxy in self.resources:
-            resource_name = proxy
-        return super(SalesForceApi, self).get_resource(resource_name, **kwargs)
+        if isinstance(resource, (str, unicode)):  # could be a BaseResource already
+            proxy = 'sobjects.%s' % resource
+            if not resource.startswith('sobjects.') and proxy in self.resources:
+                resource = proxy
+        return super(SalesForceApi, self).get_resource(resource, **kwargs)
 
     def get_base_url(self):
         """
