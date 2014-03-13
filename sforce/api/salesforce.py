@@ -8,8 +8,10 @@ Note: list of error codes i bumped into, we might want to recover from some of t
 import urlparse
 
 from django.conf import settings
-from django.utils import simplejson as json
-
+try:
+    import json
+except ImportError:
+    from django.utils import simplejson as json
 from requests_oauthlib.oauth2_session import OAuth2Session
 from oauthlib.oauth2 import LegacyApplicationClient
 from oauthlib.oauth2.rfc6749.parameters import validate_token_parameters

@@ -115,9 +115,11 @@ Advanced Usage
 * Create a custom api, extends the default api resources
 * Use the xml format
 
+
 TODO
 ----
 
-* Advanced usage docs
+* cache
+* advanced usage docs
 * Special resources Query and Search
 * Django 1.5 & 1.6

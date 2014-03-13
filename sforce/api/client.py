@@ -223,7 +223,7 @@ class JsonResource(BaseResource):
             return response.json()
         except ValueError, e:
             msg = u'Api call on returned invalid json : %s !' % (response.text)
-            log.error(msg + e.message)
+            log.error(msg + repr(e))
             raise APIException(msg)
 
 
