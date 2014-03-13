@@ -122,4 +122,3 @@ TODO
 * cache
 * advanced usage docs
 * Special resources Query and Search
-* Django 1.5 & 1.6
