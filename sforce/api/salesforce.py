@@ -36,6 +36,7 @@ class SalesForceLegacyApplicationClient(LegacyApplicationClient):
         token = json.loads(body)
         token['token_type'] = self.token_type
         validate_token_parameters(token, scope)
+
         # TODO: use token['signature'] to make sure the the request was not compromized
         self._populate_attributes(token)
         self.token = token
@@ -52,7 +53,7 @@ class SalesForceAuthApi(RestApi):
 
     token_request_url = '%s/services/oauth2/token' % settings.SF_AUTH_DOMAIN
     username = settings.SF_USER
-    password = settings.SF_PASSWORD + settings.SF_SECURITY_TOKEN
+    password = settings.SF_PASSWORD + getattr(settings, 'SF_SECURITY_TOKEN', '')
     client_key = settings.SF_CONSUMER_KEY
     client_secret = settings.SF_CONSUMER_SECRET
 
