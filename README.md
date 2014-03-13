@@ -58,7 +58,7 @@ class MyUser(models.Model):
 
 
 class MyUserResource(JsonResource, ModelResource):
-    path = 'Account/'
+    path = 'sobjects/Account/'
     model = MyUser
     distant_id = 'api_id'  # the name of the field storing the distant id
     fields_map = {'FirstName': 'first_name',  # a mapping between the distant and local field
