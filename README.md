@@ -114,6 +114,7 @@ Advanced Usage
 * Create a custom resource
 * Create a custom api, extends the default api resources
 * Use the xml format
+* complex distant/local mapping
 
 
 TODO
