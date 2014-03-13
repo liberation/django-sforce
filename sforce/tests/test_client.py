@@ -1,18 +1,15 @@
 import mock
 import json
 import requests
-import urllib
 from requests_oauthlib import OAuth2Session
 
 from django.test import TestCase
-from django.db.models.signals import post_save
+from django.contrib.auth.models import User
 
 from sforce.api.client import APIException
-from sforce.api.client import RestApi
-from sforce.api.client import BaseResource, JsonResource
+from sforce.api.client import RestApi, ModelBasedApi
+from sforce.api.client import BaseResource, JsonResource, ModelResource
 from sforce.api.salesforce import SalesForceApi
-
-from testproject.testapp.models import MyUser, MyUserApi, user_saved
 
 
 class MockResponse(object):
@@ -225,8 +222,16 @@ class RestApiTest(TestCase):
         self._test_request('simple', 'DELETE', status_code=requests.status_codes.codes.no_content)
 
 
-class MyUserTestApi(TestApi, MyUserApi):
-    pass
+class MyUserResource(JsonResource, ModelResource):
+    model = User
+    path = 'customer/'
+    distant_id = 'api_id'
+    fields_map = {'FirstName': 'first_name',
+                  'LastName': 'last_name'}
+
+
+class MyUserApi(ModelBasedApi, TestApi):
+    resources_tree = {'user': {'class': MyUserResource}}
 
 
 class ModelSyncTest(TestCase):
@@ -234,10 +239,8 @@ class ModelSyncTest(TestCase):
     Django specific
     """
     def setUp(self):
-        # disconnecting signal to use the mocked api
-        post_save.disconnect(user_saved, sender=MyUser)
-        self.user = MyUser.objects.create(first_name='foo', last_name='bar')
-        self.api = MyUserTestApi()
+        self.user = User.objects.create(first_name='foo', last_name='bar')
+        self.api = MyUserApi()
 
     def test_url_params(self):
         # should contain id if instance is set

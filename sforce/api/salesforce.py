@@ -156,7 +156,7 @@ class SalesForceApi(ModelBasedApi, SalesForceAuthApi):  # CachedApi
     timeout = 3  # TODO: the sandbox is sloww...
     root_path = u'services/data/v%s/' % settings.SF_API_VERSION
     cache_prefix = 'SalesForceApi'
-    resources_tree_module = settings.SF_RESOURCES
+    resources_tree_module = getattr(settings, 'SF_RESOURCES', 'sforce.api.resources')
     sobjects_whitelist = getattr(settings, 'SF_SOBJECTS_WHITELIST', [])
 
     def __init__(self):

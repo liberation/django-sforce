@@ -340,7 +340,7 @@ class ModelBasedApi(RestApi):
     def pull(self, resource_name, instance, save=True):
         resource = self.get_resource(resource_name, instance=instance)
 
-        dist_id = getattr(instance, resource.distant_id)
+        dist_id = getattr(instance, resource.distant_id, None)
         if not dist_id:
             raise ValueError('%s(%s) has no %s ! You can not pull it !' % (instance, instance.__class__, resource.distant_id))
 
@@ -355,7 +355,8 @@ class ModelBasedApi(RestApi):
         resource = self.get_resource(resource_name, instance=instance)
 
         fields = dict([(k, resource.get_distant_value(k, getattr(instance, v))) for k, v in resource.get_fields().iteritems()])
-        if getattr(instance, resource.distant_id):
+
+        if getattr(instance, resource.distant_id, None):
             # update - TODO: check the updated fields returned ?
             return self.patch(resource, data=fields)
         else:
